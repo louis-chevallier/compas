@@ -1,0 +1,3 @@
+
+start :
+	python compas.py
