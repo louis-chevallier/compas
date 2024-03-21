@@ -92,7 +92,7 @@ def choose(l) :
 
 def brasf(P1, P2, d) :
     eq = [ P1.distance(P2) - d]
-    return { "eq" : eq }
+    return { "eq" : eq, "p" : [P1, P2] }
 
 
 def strat1() :
@@ -124,7 +124,7 @@ def strat1() :
     b2 = brasf(Pf2, Pm2, d2)
     b3 = brasf(Pm1, Pm2, d3)
     
-    return { "mobiles" : [ Pm1, Pm2], "fixed" : [Pf1, Pf2], "scalars" : [ d1, d2, d3], "bras" : [ b1, b2, b3]}
+    return { "mobiles" : [ Pm1], "fixed" : [Pf1, Pf2], "scalars" : [ d1, d2, d3], "bras" : [ b1, b2, b3]}
 
 def strat4() :
     """
@@ -156,6 +156,7 @@ def add(strt) :
     EKOX(eqs)
     EKOX(d["mobiles"])
     s = solve(eqs, [ c for p in d["mobiles"] for c in p.coordinates] )
+    EKOX(s)
     eee.append(s)
 
 add(strat1)
