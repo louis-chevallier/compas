@@ -11,7 +11,12 @@ EKO()
 experiment = False
 
 if experiment :
-
+    """
+    a partir d'une equation, y = x*x 
+    resoudre l'équation en fct de x : x = sqrt(y) 
+    transformer la solution en code *torch* !
+    permet de construire le graphe de calcul en torch pour faire la GD
+    """
     x, y, z, u, v  = symbols("x y z u v")
 
     e1, e2 = y**2 + z, z - y
@@ -19,7 +24,7 @@ if experiment :
 
     ss = [(y,2),(z,3)]
     EKOX((e1.subs(ss), e2.subs(ss)))
-
+    
 
     s = solve(eq, [y, z])
     EKOX(s)
@@ -42,6 +47,7 @@ def f(u, v) :
 
 l_symbols = list(range(10000))
 a, r, ra, rb = symbols("a r ra rb")
+
 def S(n="") :
     s = symbols("%s_%d" % (n, l_symbols.pop(0)))
     return s
@@ -58,6 +64,16 @@ xp = A.x + ra * cos(a)
 yp = A.y + ra * sin(a)
 P, Q = Point2D(xp, yp), Pf("Q")
 
+"""
+étant donnés 2 points A et B
+P tourne autour de A ( rayon ra)
+l'angle Ax, AP = a
+Q tourne autour de B ( rayon rb)
+dist(P,Q) = r
+
+trouver les positions de P et Q
+"""
+
 eq = [ P.distance(Q) - r, P.distance(A) - ra, Q.distance(B) - rb]
 EKO()
 sol = solve(eq, list(P.coordinates) + list(Q.coordinates))
@@ -72,9 +88,6 @@ distances are params
 select 2 points mobiles, pm1, pm2
 objective = pm1 pm2 location at t=0 and t=end
 optimize distances wrt objectives
-
-
-
 
 """
 
@@ -91,9 +104,69 @@ def choose(l) :
     return l[i] 
 
 def brasf(P1, P2, d) :
+    """
+    rend l'eq correspondant a un bras de longueur d entre P1 et P2
+    """
     eq = [ P1.distance(P2) - d]
     return { "eq" : eq, "p" : [P1, P2] }
 
+"""
+mobiles : liste des points mobiles
+fixed : liste des points fixes
+scalars : liste des valeurs scalaires ( variables a optimiser )
+bras : liste des bras 
+"""
+
+"""
+les strats ajoutent des points fixes, des points mobiles, des bras 
+et des scalaires
+Xf un pt fixe
+Xm un pt mobiles
+B9 un bras
+
+
+depart : Af - un point fixe => a, d, Pm, bras(Af, Pm, d) / d(Af, Pm) == d, 
+initialisation : 
+mobiles = [Pm0], fixes = [ Af0 ], bras = [ bras(Af0, Pm0, d) ], scalars = [d]
+a = angle(Af0_x, Af0_Pm)
+
+
+Strat :
+    init() :
+       solve(eq, p)
+       f = torch(eq)
+    exec() => return f(angle)
+
+1/ => Af, nouveau point fixe
+
+2/ P1, P2 => d1, d2, Qm, bras(Qm, P1, d1), bras(Qm, P2, d2) 
+
+3/ bras(P, Q) => d, R, bras(P, R, d1), bras(P, Q), bras(Q, R) / R = P + v(P,Q) * u 
+
+
+construit strats
+optimizer = optim(scalars)
+
+construction du graphe:
+start = next_strat()
+
+Ta_0, Tb_0 : position initiale des extremités du segment
+Ta_90, Tb_90 : position finale des extremités du segment
+
+loop :
+    for s in strats :
+       l0.append(exec(s, angle = 0))
+       l90.append(exec(s, angle = 90))
+
+    p0_1, p0_2 = l0[-2:-1]
+    p90_1, p90_2 = l90[-2:-1]
+    loss = dist(p0_1, Ta_0) + dist(p0_2, Tb_0) 
+    loss += dist(p90_1, Ta_90) + dist(p00_2, Tb_90) 
+
+    loss.back()
+    step()
+
+"""
 
 def strat1() :
     """
@@ -145,6 +218,9 @@ def strat4() :
     
 
 def add(strt) :
+    """
+    ajoute des éléments décrits par str
+    """
     global fixed, mobiles, scalars, bras
     d = strt()
     fixed += d["fixed"]
