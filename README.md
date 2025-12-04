@@ -64,6 +64,13 @@ ajuster les variables
 obliger H et O à descendre verticalement sur un distance d1 au début de l'intervalle
 forcer la distance (H O) = d2
 
+éviter collisions des axes ( épaisseurs des boulons)
+
+introduire une épaisseur des bras
+idée : calculer la surface des bras, marquer l'espace total balayé par les bras et minimiser sa surface
+pénaliser le recouvrement d'un axe avec un bras auquel il n'est pas connecté
+introduire un min/max sur la longueur des bras  
+
 forcer (H O) à arriver en un certain point à la fin
 
 ou
