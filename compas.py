@@ -19,6 +19,11 @@ if experiment :
     """
     x, y, z, u, v  = symbols("x y z u v")
 
+	"""
+	on donne 2 equations et 2 variables u et v
+	
+	"""
+	
     e1, e2 = y**2 + z, z - y
     eq = [ e1 - u, e2 - v]
 
@@ -115,9 +120,7 @@ mobiles : liste des points mobiles
 fixed : liste des points fixes
 scalars : liste des valeurs scalaires ( variables a optimiser )
 bras : liste des bras 
-"""
 
-"""
 les strats ajoutent des points fixes, des points mobiles, des bras 
 et des scalaires
 Xf un pt fixe
@@ -187,8 +190,6 @@ def strat1() :
     Pf1, Pf2 = choose(fixed), choose(fixed)
     Pm2 = Pf("p2")
     d1, d2, d3 = S("d1"), S("d2"), S("d3")
-
-
     xp = Pf1.x + d1 * cos(a)
     yp = Pf1.y + d1 * sin(a)
     Pm1 = Point2D(xp, yp)
@@ -197,7 +198,10 @@ def strat1() :
     b2 = brasf(Pf2, Pm2, d2)
     b3 = brasf(Pm1, Pm2, d3)
     
-    return { "mobiles" : [ Pm1], "fixed" : [Pf1, Pf2], "scalars" : [ d1, d2, d3], "bras" : [ b1, b2, b3]}
+    return { "mobiles" : [ Pm1],
+			 "fixed" : [Pf1, Pf2],
+			 "scalars" : [ d1, d2, d3],
+			 "bras" : [ b1, b2, b3]}
 
 def strat4() :
     """
