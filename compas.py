@@ -1,6 +1,6 @@
 import sympy
 import torch
-import numpy as no
+import numpy as np
 from utillc import *
 import sympy.abc as X
 from sympy import Point2D, symbols, solve, cos, sin, lambdify
@@ -264,14 +264,14 @@ def strat3() :
 		   pm = u A + v B
 	"""
 
-def rot(a, b) :
-	s = S()
+def rot(a, b, nm="rr") :
+	s = S(nm)
 	rr = a.rotate(s, b)
 	return rr, s
 
-def joint(a, b) :
+def joint(a, b, nm1="j", nm2="jj", i=0) :
 	P = P2("xx")
-	u, s = S(), S()
+	u, s = S(nm1), S(nm2)
 	x, y, z, vu, vv, px, py, qx, qy  = symbols("x y z vu vv px py qx qy")
 	if "joint" in deqs :
 		sol = deqs["joint"]
@@ -281,8 +281,8 @@ def joint(a, b) :
 		sol = solve([eq1, eq2], [x, y])
 		deqs["joint"] = sol
 	ls = [(px, a.x), (py, a.y), (qx, b.x), (qy, b.y)]
-	rx = sol[0][0].subs(ls)
-	ry = sol[0][1].subs(ls)
+	rx = sol[i][0].subs(ls)
+	ry = sol[i][1].subs(ls)
 	P = Point2D(rx, ry)
 
 	bras.append((a, P))
@@ -290,12 +290,12 @@ def joint(a, b) :
 	
 	return P, u, s
 
-def proj(a, b) :
-	u = S()
+def proj(a, b, nm="pp") :
+	u = S(nm)
 	ax, ay, bx, by  = symbols("ax ay bx by")
 	d = sympy.sqrt(((ax-bx)**2 + (ay-by)**2))
-	rx = ( ax + (bx-ax)/d * u)
-	ry = ( ay + (by-ay)/d * u)
+	rx = ( bx + (bx-ax)/d * u)
+	ry = ( by + (by-ay)/d * u)
 	ls = [(ax, a.x), (ay, a.y), (bx, b.x), (by, b.y)]
 	rx = rx.subs(ls)
 	ry = ry.subs(ls)
@@ -304,29 +304,101 @@ def proj(a, b) :
 	bras.append((a, P))
 	return P, u
 
-Cp, a = rot(C, A)
-K, u, s = joint(Cp, J)
-N, v = proj(J, K)
-F, o, b = joint(Cp, B)
-H, q = proj(Cp, F)
-O, n, w = joint(H, N)
+t1 = torch.tensor(1.)
+
+lf = [ n for p in fixed for n in [ p.x, p.y]]
+lf1 = [ n for p in fixed for n in [ t1, t1]]
+lfi = [ (-16., 12.),
+		(-16., 6.),
+		(-10., 12.),
+		(-14., 8.)]
+		
+lf1 = [ n for p in fixed for n in [ t1, t1]]
+lf1 = [ n for p in lfi for n in p]
+EKOX(lf)
+#EKOX(bras)
+
+lsciv = [-25.  / 180 * sympy.pi,
+		 2.4, # u
+		 1.6, # s
+		 5.1, # v
+		 5.2, # o
+		 5.6, # b
+		 2.4, # q
+		 4.8, # n
+		 6]   #w
+
+sciv = map(torch.tensor, lsciv)
+
+
+
+
+flat = lambda l : [ e for p in l for e in p]
+dumpx = lambda e : sympy.N(e.x.subs(list(zip(lf, flat(lfi)))).subs(list(zip(scalars, lsciv))))
+dumpy = lambda e : sympy.N(e.y.subs(list(zip(lf, flat(lfi)))).subs(list(zip(scalars, lsciv))))
+
+dump = lambda e : sympy.N(e.subs(list(zip(lf, flat(lfi)))).subs(list(zip(scalars, lsciv))))
+
+Cp, a = rot(C, A, "angle")
+K, u, s = joint(Cp, J, "u", "s")
+N, v = proj(J, K, "v")
+F, o, b = joint(Cp, B, "o", "b", i=1)
+H, q = proj(Cp, F, "q")
+O, n, w = joint(H, N, "n", "w")
+
+EKOX(list(zip(scalars, lsciv)))
+EKOX(list(zip(fixed, lfi)))
+
+#EKOX(F)
+
+EKOX(dump(Cp))
+EKOX(dump(K))
+EKOX(dump(N))
+EKOX(dumpx(F))
+EKOX(dumpy(F))
+#EKOX(dump(H))
+#EKOX(dump(O))
+
 
 #EKOX(H)
 #EKOX(O)
 #f1 = lambdify(scalars, H, "numpy")
-EKOX(scalars)
+
 EKOX(",".join(map(str, scalars)))
 
 EKOX(fixed)
-EKOX(bras)
+
 
 sc = ",".join(map(str, scalars))
+sci = ",".join(map(str, [t1 for _ in scalars]))
+sci = ",".join(map(str, sciv))
+slf = ','.join(map(str, lf))
+slf1 = ','.join(map(str, lf1))
+
 with open("gen/f.py", "w") as fd :
 	ss = """
-	from torch import *
-	def f(%s) :
-	return %s """
-	fd.write(ss % (sc, str(O)))
+import sympy
+import torch
+import numpy as no
+from utillc import *
+import os, sys
+import random
+from collections import namedtuple
+from torch import *
+
+def Point2D(x, y) :
+	return x, y
+
+
+%s = %s
+
+def f(%s) :
+	return %s, %s 
+
+EKOX(f(%s))
+
+"""
+	fd.write(ss % (slf, slf1, sc, str(F), str(F), sci))
 #	imp = __import__("f")
 #	EKOX(imp.f(torch.tensor(7.) ,torch.tensor(1.)))
 #	EKOX(f1(7., 1.))
