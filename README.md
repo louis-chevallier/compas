@@ -1,52 +1,56 @@
 
-# traduction du montage de geogebra compas v2
+# calcul de montages optimaux pour des charnieres
+
+
+## traduction du montage de geogebra compas v2
 
 a = controle de l'unique DOF
 
 - fixed : A, B, C, J
 
 - ROT(C, A, a) => C'
--  variable : a
--  C' = rotation de C autour de A d'un angle a => C'
+  - variable : a
+  - C' = rotation de C autour de A d'un angle a => C'
 
 - JOINT(C', J, u, s) => K
--  param u, s
--  dist(C' K) == u et  dist(J, K) == s => solve K
+  - param u, s
+  - dist(C' K) == u et  dist(J, K) == s => solve K
 
 - PROJ(J, K, v) => N
--  param v
--  N sur ligne (J K) et d(J,N)== v => N
+  - param v
+  - N sur ligne (J K) et d(J,N)== v => N
 
 - JOINT(C', B, o, b) => F
--  param o, b
--  dist(C', F) == o et dist(B, F) == b => F
+  - param o, b
+  - dist(C', F) == o et dist(B, F) == b => F
 
 - PROJ(C', F, q + dist(C',F)) => H 
--  param q
--  dist(F, H) == q et H sur la ligne (F C') => H
+  -  param q
+  -  dist(F, H) == q et H sur la ligne (F C') => H
 
 - JOINT(H, N, n, w) => O
-- param n w
-- dist(H, O) == n et dist(N, O) == w => O
+  - param n w
+  - dist(H, O) == n et dist(N, O) == w => O
 
 
 tracer segment(H, O)
 
-#
+##
 approche :
 
-## code forward
+### code forward
 
   obtenir le code qui calcule les terminaux H et O en fct de a
   suppose de savoir résoudre les differentes étapes
   il y en a de 2 types :
   - ROT, PROJ : calcul direct
   - JOINT : demande resolution de l'équation
-  dans les 2 types on sait coder le forward
+  
+dans les 2 types on sait coder le forward
 
-on obtient le code pytorch de ça
+> on obtient le code pytorch de ça ( avec sympy qui génère du code numpy a peu près compatible pytorch )
 
-## optim
+### optim
 
 collecter les variables : tous les params et les 4 points fixes donnés
 sauf A et B qu'on fixe
@@ -54,12 +58,12 @@ sauf A et B qu'on fixe
 
 ensuite faire varier a dans l'intervalle permis , eg [ 0, 180°]
 
-calculer les coords de tous les points
+calculer les coords de tous les points à l'aide du code obtenu en 
 appliquer les contraintes : calculer le coût
 obtenir un loss
 ajuster les variables
 
-# contraintes
+## contraintes
 
 obliger H et O à descendre verticalement sur un distance d1 au début de l'intervalle
 forcer la distance (H O) = d2
