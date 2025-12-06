@@ -13,6 +13,13 @@ print_everything()
 EKO()
 experiment = False
 
+"""
+geogebra
+connect google drive
+compas-v2
+
+
+"""
 
 
 def dist2(A, B) :
@@ -244,9 +251,6 @@ if False :
 	#s = solve(eqs, [ c for p in mobiles for c in p.coordinates] )
 	#EKOX(s)
 
-
-
-
 def strat2() :
 	"""
 	pick 2 fixed points
@@ -267,22 +271,34 @@ def strat3() :
 def rot(a, b, nm="rr") :
 	s = S(nm)
 	rr = a.rotate(s, b)
-	return rr, s
+	P = Point2D(rr.x.simplify(), rr.y.simplify())
+	return P, s
 
 def joint(a, b, nm1="j", nm2="jj", i=0) :
 	P = P2("xx")
 	u, s = S(nm1), S(nm2)
-	x, y, z, vu, vv, px, py, qx, qy  = symbols("x y z vu vv px py qx qy")
-	if "joint" in deqs :
-		sol = deqs["joint"]
-	else :
-		eq1 = ((px-x)**2 + (py-y)**2) - u ** 2
-		eq2 = ((qx-x)**2 + (qy-y)**2) - s ** 2	
-		sol = solve([eq1, eq2], [x, y])
-		deqs["joint"] = sol
+
+	symbs = "x y z vu vv px py qx qy".split(" ")
+	def create_symbol(n) :
+			s = symbols("%s_%d" % (n, l_symbols.pop(0)))
+			return s
+	syms = map(create_symbol, symbs)
+	x, y, z, vu, vv, px, py, qx, qy  = syms
+	eq1 = ((px-x)**2 + (py-y)**2) - u ** 2
+	eq2 = ((qx-x)**2 + (qy-y)**2) - s ** 2
+	EKO()
+	sol = solve([eq1, eq2], [x, y])
+	EKO()
+	deqs["joint"] = sol
 	ls = [(px, a.x), (py, a.y), (qx, b.x), (qy, b.y)]
 	rx = sol[i][0].subs(ls)
+	EKOX(rx)
+	rx = rx.simplify()
+	EKO()
 	ry = sol[i][1].subs(ls)
+	EKO()
+	ry = ry.simplify()
+	EKO()
 	P = Point2D(rx, ry)
 
 	bras.append((a, P))
@@ -297,8 +313,8 @@ def proj(a, b, nm="pp") :
 	rx = ( bx + (bx-ax)/d * u)
 	ry = ( by + (by-ay)/d * u)
 	ls = [(ax, a.x), (ay, a.y), (bx, b.x), (by, b.y)]
-	rx = rx.subs(ls)
-	ry = ry.subs(ls)
+	rx = rx.subs(ls).simplify()
+	ry = ry.subs(ls).simplify()
 	#P = a + (b-a) / d * u
 	P = Point2D(rx, ry)
 	bras.append((a, P))
@@ -330,20 +346,23 @@ lsciv = [-25.  / 180 * sympy.pi,
 
 sciv = map(torch.tensor, lsciv)
 
-
-
-
 flat = lambda l : [ e for p in l for e in p]
 dumpx = lambda e : sympy.N(e.x.subs(list(zip(lf, flat(lfi)))).subs(list(zip(scalars, lsciv))))
 dumpy = lambda e : sympy.N(e.y.subs(list(zip(lf, flat(lfi)))).subs(list(zip(scalars, lsciv))))
 
-dump = lambda e : sympy.N(e.subs(list(zip(lf, flat(lfi)))).subs(list(zip(scalars, lsciv))))
+dump = lambda e : sympy.N(e.subs(list(zip(scalars, lsciv))).subs(list(zip(lf, flat(lfi)))))
 
+EKO()
 Cp, a = rot(C, A, "angle")
+EKO()
 K, u, s = joint(Cp, J, "u", "s")
+EKO()
 N, v = proj(J, K, "v")
-F, o, b = joint(Cp, B, "o", "b", i=1)
+EKO()
+F, o, b = joint(Cp, B, "o", "b")
+EKO()
 H, q = proj(Cp, F, "q")
+EKO()
 O, n, w = joint(H, N, "n", "w")
 
 EKOX(list(zip(scalars, lsciv)))
@@ -356,8 +375,17 @@ EKOX(dump(K))
 EKOX(dump(N))
 EKOX(dumpx(F))
 EKOX(dumpy(F))
-#EKOX(dump(H))
-#EKOX(dump(O))
+EKOX(dump(F))
+EKOX(dump(H))
+
+eee = O.subs(list(zip(scalars, lsciv)))
+EKO()
+eee = eee.subs(list(zip(lf, flat(lfi))))
+#EKOX(eee)
+
+EKOX(sympy.N(eee))
+
+EKOX(dump(O))
 
 
 #EKOX(H)
