@@ -268,10 +268,16 @@ def strat3() :
 		   pm = u A + v B
 	"""
 
+def transform(x) :
+		return x
+#
+		return x.expand()
+
+
 def rot(a, b, nm="rr") :
 	s = S(nm)
 	rr = a.rotate(s, b)
-	P = Point2D(rr.x.simplify(), rr.y.simplify())
+	P = Point2D(transform(rr.x), transform(rr.y))
 	return P, s
 
 def joint(a, b, nm1="j", nm2="jj", i=0) :
@@ -292,15 +298,16 @@ def joint(a, b, nm1="j", nm2="jj", i=0) :
 	deqs["joint"] = sol
 	ls = [(px, a.x), (py, a.y), (qx, b.x), (qy, b.y)]
 	rx = sol[i][0].subs(ls)
-	EKOX(rx)
-	rx = rx.simplify()
-	EKOX(rx)
+	#EKOX(rx)
+	rx = transform(rx)
+	#EKOX(rx)
 	ry = sol[i][1].subs(ls)
-	EKOX(ry)
-	ry = ry.simplify()
-	EKOX(ry)
+	#EKOX(ry)
+	ry = transform(ry)
+	#EKOX(ry)
+	EKO()
 	P = Point2D(rx, ry)
-
+	EKO()
 	bras.append((a, P))
 	bras.append((b, P))
 	
@@ -313,8 +320,8 @@ def proj(a, b, nm="pp") :
 	rx = ( bx + (bx-ax)/d * u)
 	ry = ( by + (by-ay)/d * u)
 	ls = [(ax, a.x), (ay, a.y), (bx, b.x), (by, b.y)]
-	rx = rx.subs(ls).simplify()
-	ry = ry.subs(ls).simplify()
+	rx = transform(rx.subs(ls))
+	ry = transform(ry.subs(ls))
 	#P = a + (b-a) / d * u
 	P = Point2D(rx, ry)
 	bras.append((a, P))
@@ -334,7 +341,7 @@ lf1 = [ n for p in lfi for n in p]
 EKOX(lf)
 #EKOX(bras)
 
-lsciv = [-25.  / 180 * sympy.pi,
+lsciv = [-25.  / 180 * np.pi,
 		 2.4, # u
 		 1.6, # s
 		 5.1, # v
@@ -342,9 +349,9 @@ lsciv = [-25.  / 180 * sympy.pi,
 		 5.6, # b
 		 2.4, # q
 		 4.8, # n
-		 6]   #w
+		 6]   # w
 
-sciv = map(torch.tensor, lsciv)
+sciv = list(map(torch.tensor, lsciv))
 
 flat = lambda l : [ e for p in l for e in p]
 dumpx = lambda e : sympy.N(e.x.subs(list(zip(lf, flat(lfi)))).subs(list(zip(scalars, lsciv))))
@@ -380,12 +387,12 @@ EKOX(dump(H))
 
 eee = O.subs(list(zip(scalars, lsciv)))
 EKO()
-eee = eee.subs(list(zip(lf, flat(lfi))))
+#eee = eee.subs(list(zip(lf, flat(lfi))))
 #EKOX(eee)
+EKO()
+#EKOX(sympy.N(eee))
 
-EKOX(sympy.N(eee))
-
-EKOX(dump(O))
+#EKOX(dump(O))
 
 
 #EKOX(H)
@@ -399,7 +406,12 @@ EKOX(fixed)
 
 sc = ",".join(map(str, scalars))
 sci = ",".join(map(str, [t1 for _ in scalars]))
-sci = ",".join(map(str, sciv))
+
+EKOX(list(sciv))
+
+sci = ",".join(map(str, list(sciv)))
+EKOX(sci)
+EKOX(sciv)
 slf = ','.join(map(str, lf))
 slf1 = ','.join(map(str, lf1))
 
@@ -426,7 +438,7 @@ def f(%s) :
 EKOX(f(%s))
 
 """
-	fd.write(ss % (slf, slf1, sc, str(F), str(F), sci))
+	fd.write(ss % (slf, slf1, sc, str(H), str(O), sci))
 #	imp = __import__("f")
 #	EKOX(imp.f(torch.tensor(7.) ,torch.tensor(1.)))
 #	EKOX(f1(7., 1.))
