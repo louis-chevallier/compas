@@ -370,7 +370,7 @@ F, o, b = joint(Cp, B, "o", "b")
 EKO()
 H, q = proj(Cp, F, "q")
 EKO()
-O, n, w = joint(H, N, "n", "w")
+O, n, w = joint(H, N, "n", "w", i=1)
 
 EKOX(list(zip(scalars, lsciv)))
 EKOX(list(zip(fixed, lfi)))
