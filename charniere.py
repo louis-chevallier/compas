@@ -6,12 +6,11 @@ import math as m
 from utillc import *
 
 
-def v(a) :
-	return np.asarray(a)
+def v(a) :	return np.asarray(a)
 
-def rotate(coordinates, angle):
+def rotate(coordinates, angle_degree):
 	(x,y) = coordinates
-	angler = angle*m.pi/180
+	angler = angle_degree*m.pi/180
 	newx = x*m.cos(angler) - y*m.sin(angler)
 	newy = x*m.sin(angler) + y*m.cos(angler)
 	return v((newx, newy))
@@ -22,14 +21,16 @@ ps4 = ps2/2
 class Shape:
 	L=50
 	def compute(self, xy=(10, 60),
-			longueur = 50, epaisseur=10, rot=0) :
+				longueur = 50,
+				epaisseur=10,
+				rot=0) :
 		d = v((longueur, 0))
 		de = v((0, epaisseur))
-		vr = rotate(d, rot)
-		vr2 = rotate(de, rot)
-		xy1 = v(xy) + vr + vr2 
+		dr = rotate(d, rot)
+		der = rotate(de, rot)
+		xy1 = v(xy) + dr + der 
 		x0, y0 = xy
-		xy2 = xy + vr
+		xy2 = xy + dr
 		x1, y1 = xy1
 		return x0, y0, x1, y1
 		
@@ -41,10 +42,13 @@ class Shape:
 									 outline="black", fill="blue",
 									 width=2)
 		return rect
+
+	def tick(self) :
+		self.master.after(100, self.tick)
 		
 	def __init__(self, master=None):
 		self.master = master
-		
+		self.master.after(100, self.tick)
 		self.create()
 
 	def dessiner(self, vvv):
@@ -66,6 +70,7 @@ class Shape:
 		#self.dessiner(0)
 		#amount = slider.get()		
 		slider.pack()
+		
 		self.canvas.pack(fill=BOTH, expand=1)
 
 
