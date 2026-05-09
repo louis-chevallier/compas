@@ -4,7 +4,8 @@ from tkinter.ttk import *
 import numpy as np
 import math as m
 from utillc import *
-
+import torch
+import gen.f1 as f1
 
 def v(a) :	return np.asarray(a)
 
@@ -54,6 +55,12 @@ class Shape:
 	def dessiner(self, vvv):
 		vvv = float(vvv)
 		x0, y0, x1, y1 = self.compute(rot=vvv)
+		sc = list(f1.sc)
+		sc[0] = torch.tensor(vvv)
+		EKO()
+		o, h = f1.f(*sc)
+		EKON(o, h)
+		
 		self.canvas.coords(self.b1, x0, y0, x1, y1)
 
 	def ff(self, x) :
@@ -65,7 +72,7 @@ class Shape:
 					   #label = 'Amount',
 					   length = 500,
 					   command = self.ff,
-					   from_= 0, to = 90)
+					   from_= -np.pi, to = np.pi)
 		self.b1 = self.block(longueur=100, rot=0)
 		#self.dessiner(0)
 		#amount = slider.get()		

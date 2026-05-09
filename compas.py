@@ -15,8 +15,9 @@ experiment = False
 
 """
 geogebra
+log in ( google account)
 connect google drive
-compas-v2
+open compas-v2
 
 
 """
@@ -275,57 +276,75 @@ def transform(x) :
 
 
 def rot(a, b, nm="rr") :
-	s = S(nm)
-	rr = a.rotate(s, b)
-	P = Point2D(transform(rr.x), transform(rr.y))
-	return P, s
+		"""
+		rotate a around b by angle nm
+		yield:
+		- the rotated image of a
+		- the rotation angle
+		"""
+		s = S(nm)
+		rr = a.rotate(s, b)
+		P = Point2D(transform(rr.x), transform(rr.y))
+		return P, s
 
 def joint(a, b, nm1="j", nm2="jj", i=0) :
-	P = P2("xx")
-	u, s = S(nm1), S(nm2)
-
-	symbs = "x y z vu vv px py qx qy".split(" ")
-	def create_symbol(n) :
-			s = symbols("%s_%d" % (n, l_symbols.pop(0)))
-			return s
-	syms = map(create_symbol, symbs)
-	x, y, z, vu, vv, px, py, qx, qy  = syms
-	eq1 = ((px-x)**2 + (py-y)**2) - u ** 2
-	eq2 = ((qx-x)**2 + (qy-y)**2) - s ** 2
-	EKO()
-	sol = solve([eq1, eq2], [x, y])
-	EKO()
-	deqs["joint"] = sol
-	ls = [(px, a.x), (py, a.y), (qx, b.x), (qy, b.y)]
-	rx = sol[i][0].subs(ls)
-	#EKOX(rx)
-	rx = transform(rx)
-	#EKOX(rx)
-	ry = sol[i][1].subs(ls)
-	#EKOX(ry)
-	ry = transform(ry)
-	#EKOX(ry)
-	EKO()
-	P = Point2D(rx, ry)
-	EKO()
-	bras.append((a, P))
-	bras.append((b, P))
-	
-	return P, u, s
+		"""
+		define a point P with dist(a,P) = nm1 and dist(b, P) = nm2
+		yield:
+		- P
+		- symbols corresponding to nm1, nm2
+		"""
+		P = P2("xx")
+		u, s = S(nm1), S(nm2)
+		
+		symbs = "x y z vu vv px py qx qy".split(" ")
+		def create_symbol(n) :
+				s = symbols("%s_%d" % (n, l_symbols.pop(0)))
+				return s
+		syms = map(create_symbol, symbs)
+		x, y, z, vu, vv, px, py, qx, qy  = syms
+		eq1 = ((px-x)**2 + (py-y)**2) - u ** 2
+		eq2 = ((qx-x)**2 + (qy-y)**2) - s ** 2
+		EKO()
+		sol = solve([eq1, eq2], [x, y])
+		EKO()
+		deqs["joint"] = sol
+		ls = [(px, a.x), (py, a.y), (qx, b.x), (qy, b.y)]
+		rx = sol[i][0].subs(ls)
+		#EKOX(rx)
+		rx = transform(rx)
+		#EKOX(rx)
+		ry = sol[i][1].subs(ls)
+		#EKOX(ry)
+		ry = transform(ry)
+		#EKOX(ry)
+		EKO()
+		P = Point2D(rx, ry)
+		EKO()
+		bras.append((a, P))
+		bras.append((b, P))
+		
+		return P, u, s
 
 def proj(a, b, nm="pp") :
-	u = S(nm)
-	ax, ay, bx, by  = symbols("ax ay bx by")
-	d = sympy.sqrt(((ax-bx)**2 + (ay-by)**2))
-	rx = ( bx + (bx-ax)/d * u)
-	ry = ( by + (by-ay)/d * u)
-	ls = [(ax, a.x), (ay, a.y), (bx, b.x), (by, b.y)]
-	rx = transform(rx.subs(ls))
-	ry = transform(ry.subs(ls))
-	#P = a + (b-a) / d * u
-	P = Point2D(rx, ry)
-	bras.append((a, P))
-	return P, u
+		"""
+		define P such that vect(a, b) * nm = vect(a, P)
+		yield :
+		- P
+		- symbol u
+		"""
+		u = S(nm)
+		ax, ay, bx, by  = symbols("ax ay bx by")
+		d = sympy.sqrt(((ax-bx)**2 + (ay-by)**2))
+		rx = ( bx + (bx-ax)/d * u)
+		ry = ( by + (by-ay)/d * u)
+		ls = [(ax, a.x), (ay, a.y), (bx, b.x), (by, b.y)]
+		rx = transform(rx.subs(ls))
+		ry = transform(ry.subs(ls))
+		#P = a + (b-a) / d * u
+		P = Point2D(rx, ry)
+		bras.append((a, P))
+		return P, u
 
 t1 = torch.tensor(1.)
 
@@ -415,8 +434,8 @@ EKOX(sciv)
 slf = ','.join(map(str, lf))
 slf1 = ','.join(map(str, lf1))
 
-with open("gen/f.py", "w") as fd :
-	ss = """
+with open("gen/f1.py", "w") as fd :
+	ss1 = f"""
 import sympy
 import torch
 import numpy as no
@@ -428,17 +447,15 @@ from torch import *
 
 def Point2D(x, y) :
 	return x, y
+{slf} = {slf1}
 
-
-%s = %s
-
-def f(%s) :
-	return %s, %s 
-
-EKOX(f(%s))
+{sc}={sci}
+sc={sc}
+def f({sc}) :
+	return {str(H)}, {str(O)} 
+EKOX(f({sci}))
 
 """
-	fd.write(ss % (slf, slf1, sc, str(H), str(O), sci))
-#	imp = __import__("f")
-#	EKOX(imp.f(torch.tensor(7.) ,torch.tensor(1.)))
-#	EKOX(f1(7., 1.))
+
+	fd.write(ss1)
+
