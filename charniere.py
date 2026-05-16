@@ -6,7 +6,10 @@ import math as m
 from utillc import *
 import torch
 
+import compas1
+
 v = lambda x : np.asarray(x)
+to_np = lambda x : x.cpu().detach().numpy()
 
 
 def rotate(coordinates, angle_degree):
@@ -56,28 +59,50 @@ class Shape:
 			vvv = float(vvv)
 			x0, y0, x1, y1 = self.compute(rot=vvv)
 			self.canvas.coords(self.b1, x0, y0, x1, y1)
-			
 			A = (30, 40)
 			B = (30, 20)
-			Cp = (60, 40)
-			F = (80, 30)		
+			Cp = (60, 40+vvv)
+			F = (80, 30+vvv)		
 			r=5
-			dcc = lambda p, pc : self.canvas.coords(p, pc[0]-r, pc[1]-r, pc[0]+r, pc[1]+r)
-			dcl = lambda p, pa, pb : self.canvas.coords(p, pa[0], pa[1], pb[0], pb[1])
+
+			shift = lambda x : ((x + (30-14, 0)) * 40 + ( 20, 20)) * ( 1, -1) + (20, 800)
 			
+			lll = map(to_np, compas1.f1(vvv))
+			lll = list(map(shift, lll))
+			EKOX(list(lll))
+			A, B, C, J, Cp, F, N, H, O = tuple(lll)
+
+			
+			dcc = lambda p, pc : (self.canvas.coords(p[0],
+													 pc[0]-r, pc[1]-r, pc[0]+r, pc[1]+r),
+								  self.canvas.coords(p[1],
+													 pc[0], pc[1]-r*3))
+			dcl = lambda p, pa, pb : self.canvas.coords(p, pa[0], pa[1], pb[0], pb[1])
 			
 			dcc(self.ca, A)
 			dcc(self.cb, B)
+			dcc(self.cc, C)
+			dcc(self.cj, F)
 			dcc(self.ccp, Cp)
 			dcc(self.cf, F)
+			dcc(self.cn, F)
+			dcc(self.ch, F)
+			dcc(self.co, F)
 			
 			dcl(self.sacp, A, Cp)
 			dcl(self.sbf, B, F)
 			dcl(self.scpf, Cp, F)
-			
+			dcl(self.sfh, F, H)
+			dcl(self.sjc, J, C)
+			dcl(self.scn, C, N)
+			dcl(self.sho, H, O)
+			dcl(self.sno, N, O)
+
 
 	def ff(self, x) :
-			self.canvas.after(10, self.dessiner, x)			
+			self.canvas.after(10, self.dessiner, x)
+
+
 		
 	def create(self):		
 			self.canvas = Canvas(self.master)
@@ -89,25 +114,38 @@ class Shape:
 			self.b1 = self.block(longueur=100, rot=0)
 			c, r = (30, 40), 5
 
-			ca = lambda : self.canvas.create_arc(c[0]-r, c[0]-r,
-												 c[1]+r, c[1]+r,
-												 fill="green",
-												 outline="",
-												 start=0,
-												 extent=359)
-			
+			ca = lambda txt : (self.canvas.create_arc(c[0]-r, c[0]-r,
+													  c[1]+r, c[1]+r,
+													  fill="green",
+													  outline="",
+													  start=0,
+													  extent=359),
+							   self.canvas.create_text(100,10,
+													   fill="darkblue",
+													   font="Times 20 italic bold",
+													   text=txt))			
 			cl = lambda : self.canvas.create_line(c[0], c[1],
 												  c[0]+20, c[1]+20,
 												  fill="pink",
 												  width=3)
-			self.ca = ca()
-			self.cb = ca()
-			self.ccp = ca()
-			self.cf = ca()
+			self.ca = ca("A")
+			self.cb = ca("B")
+			self.ccp = ca("Cp")
+			self.cc = ca("C")
+			self.cj = ca("J")			
+			self.cf = ca("F")
+			self.cn = ca("N")
+			self.ch = ca("H")
+			self.co = ca("O")
 			
 			self.sacp = cl()
 			self.sbf= cl()
 			self.scpf = cl()
+			self.sfh = cl()
+			self.sjc = cl()
+			self.scn = cl()
+			self.sho = cl()
+			self.sno = cl()
 			
 		
 			#self.dessiner(0)
