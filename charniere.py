@@ -5,9 +5,9 @@ import numpy as np
 import math as m
 from utillc import *
 import torch
-import gen.f1 as f1
 
-def v(a) :	return np.asarray(a)
+v = lambda x : np.asarray(x)
+
 
 def rotate(coordinates, angle_degree):
 	(x,y) = coordinates
@@ -53,32 +53,67 @@ class Shape:
 		self.create()
 
 	def dessiner(self, vvv):
-		vvv = float(vvv)
-		x0, y0, x1, y1 = self.compute(rot=vvv)
-		sc = list(f1.sc)
-		sc[0] = torch.tensor(vvv)
-		EKO()
-		o, h = f1.f(*sc)
-		EKON(o, h)
-		
-		self.canvas.coords(self.b1, x0, y0, x1, y1)
+			vvv = float(vvv)
+			x0, y0, x1, y1 = self.compute(rot=vvv)
+			self.canvas.coords(self.b1, x0, y0, x1, y1)
+			
+			A = (30, 40)
+			B = (30, 20)
+			Cp = (60, 40)
+			F = (80, 30)		
+			r=5
+			dcc = lambda p, pc : self.canvas.coords(p, pc[0]-r, pc[1]-r, pc[0]+r, pc[1]+r)
+			dcl = lambda p, pa, pb : self.canvas.coords(p, pa[0], pa[1], pb[0], pb[1])
+			
+			
+			dcc(self.ca, A)
+			dcc(self.cb, B)
+			dcc(self.ccp, Cp)
+			dcc(self.cf, F)
+			
+			dcl(self.sacp, A, Cp)
+			dcl(self.sbf, B, F)
+			dcl(self.scpf, Cp, F)
+			
 
 	def ff(self, x) :
-		self.canvas.after(10, self.dessiner, x)			
+			self.canvas.after(10, self.dessiner, x)			
 		
 	def create(self):		
-		self.canvas = Canvas(self.master)
-		slider = Scale(orient='horizontal',
-					   #label = 'Amount',
-					   length = 500,
-					   command = self.ff,
-					   from_= -np.pi, to = np.pi)
-		self.b1 = self.block(longueur=100, rot=0)
-		#self.dessiner(0)
-		#amount = slider.get()		
-		slider.pack()
+			self.canvas = Canvas(self.master)
+			slider = Scale(orient='horizontal',
+						   #label = 'Amount',
+						   length = 500,
+						   command = self.ff,
+						   from_= -np.pi, to = np.pi)
+			self.b1 = self.block(longueur=100, rot=0)
+			c, r = (30, 40), 5
+
+			ca = lambda : self.canvas.create_arc(c[0]-r, c[0]-r,
+												 c[1]+r, c[1]+r,
+												 fill="green",
+												 outline="",
+												 start=0,
+												 extent=359)
+			
+			cl = lambda : self.canvas.create_line(c[0], c[1],
+												  c[0]+20, c[1]+20,
+												  fill="pink",
+												  width=3)
+			self.ca = ca()
+			self.cb = ca()
+			self.ccp = ca()
+			self.cf = ca()
+			
+			self.sacp = cl()
+			self.sbf= cl()
+			self.scpf = cl()
+			
 		
-		self.canvas.pack(fill=BOTH, expand=1)
+			#self.dessiner(0)
+			#amount = slider.get()		
+			slider.pack()
+			self.canvas.pack(fill=BOTH, expand=1)
 
 
 if __name__ == "__main__":

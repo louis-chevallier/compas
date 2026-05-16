@@ -19,9 +19,7 @@ log in ( google account)
 connect google drive
 open compas-v2
 
-
 """
-
 
 def dist2(A, B) :
 	px, py = A.x, A.y
@@ -326,6 +324,13 @@ def joint(a, b, nm1="j", nm2="jj", i=0) :
 		
 		return P, u, s
 
+EKOX(A)
+EKOX(B)
+
+X, u, s = joint(A, B, "u", "s")
+EKOX(X)
+sys.exit(0)
+
 def proj(a, b, nm="pp") :
 		"""
 		define P such that vect(a, b) * nm = vect(a, P)
@@ -378,9 +383,13 @@ dumpy = lambda e : sympy.N(e.y.subs(list(zip(lf, flat(lfi)))).subs(list(zip(scal
 
 dump = lambda e : sympy.N(e.subs(list(zip(scalars, lsciv))).subs(list(zip(lf, flat(lfi)))))
 
+
+
+
+
 EKO()
 Cp, a = rot(C, A, "angle")
-EKO()
+EKOX(dump(Cp))
 K, u, s = joint(Cp, J, "u", "s")
 EKO()
 N, v = proj(J, K, "v")
@@ -388,8 +397,10 @@ EKO()
 F, o, b = joint(Cp, B, "o", "b")
 EKO()
 H, q = proj(Cp, F, "q")
-EKO()
+EKOX(dump(H))
 O, n, w = joint(H, N, "n", "w", i=1)
+EKOX(dump(O))
+#sys.exit(0)
 
 EKOX(list(zip(scalars, lsciv)))
 EKOX(list(zip(fixed, lfi)))
