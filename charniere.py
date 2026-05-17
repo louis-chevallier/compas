@@ -5,7 +5,7 @@ import numpy as np
 import math as m
 from utillc import *
 import torch
-
+from torch import tensor as T
 import compas1
 
 v = lambda x : np.asarray(x)
@@ -59,10 +59,14 @@ class Shape:
 			vvv = float(vvv)
 			r=5
 			shift = lambda x : ((x + (30-14, 0)) * 70 + ( 20, 20)) * ( 1, -1) + (20, 900)
-			lll = map(to_np, compas1.f1(vvv))
+			lll = map(to_np, compas1.f1(T(vvv)))
 			lll = list(map(shift, lll))
 			#EKOX(list(lll))
 			A, B, C, J, Cp, F, N, H, O, K = tuple(lll)
+
+			EKOX(H)
+			EKOX(O)
+
 			
 			dcc = lambda p, pc : (self.canvas.coords(p[0],
 													 pc[0]-r, pc[1]-r, pc[0]+r, pc[1]+r),
