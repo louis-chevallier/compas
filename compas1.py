@@ -1,6 +1,7 @@
 import sympy
 import torch
-from torch import tensor as T, optim, sqrt
+from torch import tensor as T1
+from torch import optim, sqrt
 import numpy as np
 from utillc import *
 import sympy.abc as X
@@ -17,21 +18,34 @@ print_everything()
 
 EKO()
 
-V = lambda x : torch.tensor(x, requires_grad=True)
+dev = "cuda" if torch.cuda.is_available() else "cpu"
 
-P = lambda x, y : T([x,y])
+
+V = lambda x : torch.tensor(x, requires_grad=True, device=dev)
+T = lambda x : torch.stack(x)
+Tsr = lambda x : torch.tensor(x, device=dev)
+P = lambda x, y : T([Tsr(x),Tsr(y)])
 
 def rotation_matrix(a) :
-				return T([[torch.cos(a), -torch.sin(a)],
-						  [torch.sin(a), torch.cos(a)]])
+	s = torch.sin(a)
+	c = torch.cos(a)
+	rot = torch.stack([torch.stack([c, -s]),
+					   torch.stack([s, c])])
+	return rot
 
 def rot(A, Center, a) :
 		"""
 		rotate a around Center by angle a
 		"""
 		CA = A - Center
-		R = rotation_matrix(a) @ CA
-		X = R + Center
+		EKOX(CA.shape)
+		EKOX(a.shape)
+		rotm = rotation_matrix(a)
+		EKOX(rotm.shape)
+		R = CA @ rotm
+		EKON(R.shape, Center.shape)
+		X = R + Center[:,None]
+		EKOX(X.shape)
 		return X
 
 def proj(A, B, l) :
@@ -94,7 +108,7 @@ def joint(a, b, u, s, i=0) :
 degree = 2 * torch.pi / 360
 A, B, C, J = P(-16., 10.),  P(-16., 6.),  P(-11., 9.), P(-14., 10.)
 
-a = T(21 * degree)
+a = Tsr(21 * degree)
 
 u, s = map(V, [1.9, 2.])
 v = V(6.5)
@@ -116,7 +130,7 @@ def f1(a) :
 				H = proj2(Cp, F, q)
 				O = joint(H, N, n, w, i=1)
 				return A, B, C, J, Cp, F, N, H, O, K
-pi = T(np.pi)
+pi = Tsr(np.pi)
 
 def optimize() :
 				"""
@@ -125,12 +139,19 @@ def optimize() :
 				"""
 				
 				variables = [u, s, v, o, b, q, n, w]
+				EKOX(variables)
 				optimizer = optim.SGD(variables, lr=0.01, momentum=0.9)
 				optimizer = optim.Adam(variables, lr=0.1)
+
+
+				aa = torch.arange(40., 0, -0.1, device=dev)
+				ard = aa / 360 * 2 * pi				
+				lps = A, B, C, J, Cp, F, N, H, O, K = f1(ard)
+				EKOX(A.shape)
 				for _n in range(100) :
 								los, lhs = [], []
 								optimizer.zero_grad()
-								for ia, a in enumerate(torch.arange(40., 0, -0.1)) :
+								for ia, a in enumerate(torch.arange(40., 0, -0.1, device=dev)) :
 												rd = a / 360 * 2 * pi
 												lps = A, B, C, J, Cp, F, N, H, O, K = f1(rd)
 												lps = torch.cat(lps)
