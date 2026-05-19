@@ -6,6 +6,9 @@ import math as m
 from utillc import *
 import torch
 from torch import tensor as T
+from torch import tensor as T1
+from torch import optim, sqrt
+
 import compas1
 
 v = lambda x : np.asarray(x)
@@ -21,6 +24,7 @@ def rotate(coordinates, angle_degree):
 
 ps2 = 180/2
 ps4 = ps2/2
+Tsr = lambda x : torch.tensor(x, device=compas1.dev)
 
 class Shape:
 	L=50
@@ -47,43 +51,86 @@ class Shape:
 									 width=2)
 		return rect
 
-	def tick(self) :
-		self.master.after(100, self.tick)
 		
 	def __init__(self, master=None):
 		self.master = master
-		self.master.after(100, self.tick)
+		
 		self.create()
 
+
+		degree = 2 * torch.pi / 360
+		a = Tsr(21 * degree)
+		
+		aa = torch.arange(-40., 0, 0.1, device=compas1.dev)
+		"""
+		aa = torch.arange(40., 0, -1., device=dev)
+		aa = torch.arange(40., 0, -9., device=dev)
+		aa = Tsr([40., 31., 22., 12., 1.])
+		aa = Tsr([40., 31., 22., 1.])		
+		aa = Tsr([40., 31., 22.])
+		aa = Tsr([39.])
+		"""
+		W = aa.shape[0]
+		ard = aa / 360 * 2 * np.pi
+		A, B, C, J,  u, s, v, o, b, q, n, w = compas1.build(W)
+		self.lvs = ard, A, B, C, J,  u, s, v, o, b, q, n, w
+		
+		variables = [u, s, v, o, b, q, n, w]
+		self.var = tuple(variables) 
+
+		self.var = compas1.optimize()
+
+		
+		EKOX(variables)
+		optimizer = optim.SGD(variables, lr=0.01, momentum=0.9)
+		self.optimizer = optim.Adam(variables, lr=0.01)
+		self.count = 0
+		self.vvv = 32
+		#self.tick()
+		#self.master.after(100, self.tick)
+		
+	def tick(self) :
+		self.master.after(100, self.tick)
+		compas1.step(self.optimizer, self.lvs, self.count)
+		self.count += 1
+		self.dessiner(self.vvv)
+
 	def dessiner(self, vvv):
-			vvv = float(vvv)
+			self.vvv = vvv = float(vvv)
+			
 			r=5
 			shift = lambda x : ((x + (30-14, 0)) * 70 + ( 20, 20)) * ( 1, -1) + (180, 900)
 			def kkk(NN) :
 					vvvs = [vvv] * NN
-					EKOX(vvvs)
+					#EKOX(vvvs)
 					A, B, C, J,  u, s, v, o, b, q, n, w = compas1.build(NN)
-					lll = map(to_np, compas1.f1(T(vvvs), A, B, C, J, u, s, v, o, b, q, n, w))
+					u, s, v, o, b, q, n, w = self.var
+
+					lps = compas1.f1(T(vvvs), A, B, C, J, u, s, v, o, b, q, n, w)
+					lps1 = torch.stack(lps).permute(1,0,2)
+					#EKOX(lps.isnan().any())
+					assert(not lps1.isnan().any())
+					
+					lll = map(to_np, lps)
 					lll = list(map(shift, lll))
 					Cp, F, N, H, O, K = tuple(lll)
-					EKON(Cp, F, N, H, O, K)
-					EKON(A, B, C, J)
+					#EKON(Cp, F, N, H, O, K)
+					#EKON(A, B, C, J)
 					
 					#EKOX(list(lll))
 					squeeze = lambda x : x[0]
 					Cp, F, N, H, O, K = map(squeeze, tuple(lll))
 					A, B, C, J = map(compose(shift,  to_np, squeeze), (A, B, C, J))
+
 					return A, B, C, J, Cp, F, N, H, O, K
+			
 			A, B, C, J, Cp, F, N, H, O, K = kkk(1)
-						
 			dcc = lambda p, pc : (self.canvas.coords(p[0],
 													 pc[0]-r, pc[1]-r, pc[0]+r, pc[1]+r),
 								  self.canvas.coords(p[1],
 													 pc[0], pc[1]-r*3))
 			dcl = lambda p, pa, pb : self.canvas.coords(p, pa[0], pa[1], pb[0], pb[1])
 			
-
-
 			dcl(self.sacp, A, Cp)
 			dcl(self.sbf, B, F)
 			dcl(self.scpf, Cp, F)

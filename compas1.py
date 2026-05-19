@@ -12,7 +12,7 @@ import os, sys
 import random
 from collections import namedtuple
 import inspect
-
+import matplotlib.pyplot as plt
 
 print_everything()
 
@@ -129,6 +129,34 @@ def build(W=1) :
 		
 		return A, B, C, J,  u, s, v, o, b, q, n, w
 
+
+def step(optimizer, ctxt, _n=0) :
+				los, lhs = [], []
+				optimizer.zero_grad()
+				ard, A, B, C, J,  u, s, v, o, b, q, n, w = ctxt
+				# version vectorisée
+				lps = Cp, F, N, H, O, K = f1(ard, A, B, C, J,
+											 u, s, v, o, b, q, n, w)
+				lps = torch.stack(lps).permute(1,0,2)
+				mask = ~torch.any(lps.isnan(),dim=(1,2))
+				lps = lps[mask]
+				lhs = lps[:, 3, :] # H
+				los = lps[:, 4, :] # O
+				hmx = torch.amax(lhs, dim=0)
+				hmn = torch.amin(lhs, dim=0)
+				omx = torch.amax(los, dim=0)
+				omn = torch.amin(los, dim=0)
+				
+				loss = (hmx[0] - hmn[0]) # on veut excursion horizontale minimum
+				loss += torch.abs(hmx[1] - hmn[1] - 300) / 300 # et de hauteur donnée
+				
+				loss += (los[0][1] - lhs[0][1]).norm() # on veut la hauteur de O et H au départ egale
+				loss += (los[-1][0] - lhs[-1][0]).norm() # on veut l'abscisse de O et H a la fin egale
+				EKON(_n, lps.shape, loss.item())
+				loss.backward()
+				optimizer.step()				
+				return loss
+
 def optimize() :
 		"""
 				H en haut : (258, 442), en bas : (297, 766)
@@ -138,7 +166,7 @@ def optimize() :
 		degree = 2 * torch.pi / 360
 		a = Tsr(21 * degree)
 		
-		aa = torch.arange(40., 0, -0.1, device=dev)
+		aa = torch.arange(-40., 0, 0.1, device=dev)
 		"""
 		aa = torch.arange(40., 0, -1., device=dev)
 		aa = torch.arange(40., 0, -9., device=dev)
@@ -153,80 +181,21 @@ def optimize() :
 		variables = [u, s, v, o, b, q, n, w]
 		EKOX(variables)
 		optimizer = optim.SGD(variables, lr=0.01, momentum=0.9)
-		optimizer = optim.Adam(variables, lr=0.00001)
+		optimizer = optim.Adam(variables, lr=0.01)
 		lps = Cp, F, N, H, O, K = f1(ard, A, B, C, J, u, s, v, o, b, q, n, w)
 		lps = torch.stack(lps).permute(1,0,2)
+		EKOX(lps.shape)
 		mask = ~torch.any(lps.isnan(),dim=(1,2))
 		lps = lps[mask]
 		EKOX(lps.shape)
-		
-		
-		for _n in range(100) :
-				los, lhs = [], []
-				optimizer.zero_grad()
-
-				# version vectorisée
-				lps = Cp, F, N, H, O, K = f1(ard, A, B, C, J,
-											 u, s, v, o, b, q, n, w)
-				lps = torch.stack(lps).permute(1,0,2)
-				mask = ~torch.any(lps.isnan(),dim=(1,2))
-				lps = lps[mask]
-				EKOX(lps.shape)
-				lhs = lps[:, 3, :] # H
-				los = lps[:, 4, :] # O
-				EKOX(lhs.shape)
-				hmx = torch.amax(lhs, dim=0)
-				hmn = torch.amin(lhs, dim=0)
-				EKOX(hmx.shape)
-				omx = torch.amax(los, dim=0)
-				omn = torch.amin(los, dim=0)
+		ctxt = ard, A, B, C, J,  u, s, v, o, b, q, n, w
+		losses = []
+		for _n in range(300) :
+				ll = step(optimizer, ctxt, _n=_n)
+				losses.append(ll.item())
 				
-				loss = (hmx[0] - hmn[0]) # on veut excursion horizontale minimum
-				EKOX(loss.item())
-				loss += torch.abs(hmx[1] - hmn[1] - 300) / 300 # et de hauteur donnée
-				
-				EKOX(loss.item())
-				loss += (los[0][1] - lhs[0][1]).norm() # on veut la hauteur de O et H au départ egale
-				EKOX(loss.item())
-				loss += (los[-1][0] - lhs[-1][0]).norm() # on veut l'abscisse de O et H a la fin egale
-				EKON(_n, loss.item())
-				loss.backward()
-				optimizer.step()				
-				
-
-
-
-				"""
-				
-				for ia, a in enumerate(torch.arange(40., 0, -0.1, device=dev)) :
-						rd = a / 360 * 2 * pi
-						rd = rd[None]
-						lps = Cp, F, N, H, O, K = f1(rd, A, B, C, J,
-													 u, s, v, o, b, q, n, w)
-						lps = torch.stack(lps).permute(1,0,2)
-						mask = ~torch.any(lps.isnan(),dim=(1,2))
-						lps = lps[mask]
-						
-						los.append(O)
-						lhs.append(H)
-						
-						lhs = torch.stack(lhs)
-						hmx = torch.amax(lhs, dim=0)
-						hmn = torch.amin(lhs, dim=0)
-						
-						los = torch.stack(los)
-						omx = torch.amax(los, dim=0)
-						omn = torch.amin(los, dim=0)
-						
-						loss = (hmx[0] - hmn[0]) # on veut excursion horizontale minimum
-						loss += torch.abs(hmx[1] - hmn[1] - 300) # et de hauteur donnée
-						
-						loss += (los[0][1] - lhs[0][1]).norm() # on veut la hauteur de O et H au départ egale
-						loss += (los[-1][0] - lhs[-1][0]).norm() # on veut l'abscisse de O et H a la fin egale
-						EKON(_n, loss.item())
-						loss.backward()
-						optimizer.step()				
-				"""		
-optimize()
+		plt.plot(losses); plt.show()
+		return u, s, v, o, b, q, n, w
+#optimize()
 #EKON(u,   s,   v,   o,   b,   q,   n,   w)
 
