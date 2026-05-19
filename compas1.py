@@ -38,14 +38,9 @@ def rot(A, Center, a) :
 		rotate a around Center by angle a
 		"""
 		CA = A - Center
-		EKOX(CA.shape)
-		EKOX(a.shape)
-		rotm = rotation_matrix(a)
-		EKOX(rotm.shape)
-		R = CA @ rotm
-		EKON(R.shape, Center.shape)
-		X = R + Center[:,None]
-		EKOX(X.shape)
+		rotm = rotation_matrix(a).permute(2,1,0)
+		R = torch.matmul(rotm, CA[:,:,None])
+		X = R[:,:,0] + Center
 		return X
 
 def proj(A, B, l) :
@@ -62,8 +57,10 @@ def proj2(A, B, l) :
 		if dist(A,B) = d
 		return X such that AX = AB / d * l
 		"""
-		d = (A-B).norm()
-		X = (B-A)*(d+l)/d+A
+		d = (A-B).norm(dim=1)
+		f = (d+l)/d
+		X1 = (B-A)*f[:,None]
+		X = X1+A
 		return X
 
 u, s, px, x, py, y, qx, qy  = symbols("u s px x py y qx qy")
@@ -93,92 +90,143 @@ def joint(a, b, u, s, i=0) :
 		define a point P with dist(a,P) = u and dist(b, P) = s
 		- equation solved by sympy
 		"""
-		Ax_2, Ay_3 = a
-		Bx_4, By_5 = b
-		u_12, s_13 = u, s
-
-		lf1(a[0], a[1], b[0], b[1], u, s)		
-		
-		X = (lf1 if i == 0 else lf2)(a[0], a[1],
-									 b[0], b[1],
+		X = (lf1 if i == 0 else lf2)(a[:, 0], a[:, 1],
+									 b[:, 0], b[:, 1],
 									 u, s)
-		X = torch.hstack(X)
+
+		X = torch.vstack(X).T
 		return X
 
-degree = 2 * torch.pi / 360
-A, B, C, J = P(-16., 10.),  P(-16., 6.),  P(-11., 9.), P(-14., 10.)
 
-a = Tsr(21 * degree)
 
-u, s = map(V, [1.9, 2.])
-v = V(6.5)
-o, b = V(3.8), V(4.5)
-q = V(2.4)
-n, w = V(4.8), V(6.)
 
-ddd, u,   s,   v,   o,   b,   q,   n,   w = map(V, [
-0.,  1.9, 2.0, 6.5, 3.8, 4.5, 2.4, 4.8, 6.0])
-EKON(u,   s,   v,   o,   b,   q,   n,   w)
-def f1(a) :
-				"""
+def f1(a, A, B, C, J, u, s, v, o, b, q, n, w) :
+		"""
 				a en rd
-				"""
-				Cp= rot(C, A, a)
-				K = joint(Cp, J, u, s)
-				N = proj2(J, K, v)
-				F = joint(Cp, B, o, b)
-				H = proj2(Cp, F, q)
-				O = joint(H, N, n, w, i=1)
-				return A, B, C, J, Cp, F, N, H, O, K
+		"""
+		Cp= rot(C, A, a)
+		K = joint(Cp, J, u, s)
+		N = proj2(J, K, v)
+		F = joint(Cp, B, o, b)
+		H = proj2(Cp, F, q)
+		O = joint(H, N, n, w, i=1)
+		return Cp, F, N, H, O, K
+
 pi = Tsr(np.pi)
 
+
+def build(W=1) :
+		A, B, C, J = P(-16., 10.),  P(-16., 6.),  P(-11., 9.), P(-14., 10.)
+		u, s = map(V, [1.9, 2.])
+		v = V(6.5)
+		o, b = V(3.8), V(4.5)
+		q = V(2.4)
+		n, w = V(4.8), V(6.)
+		ddd, u,   s,   v,   o,   b,   q,   n,   w = map(V, [
+				0.,  1.9, 2.0, 6.5, 3.8, 4.5, 2.4, 4.8, 6.0])
+		expand = lambda x : x.expand(W,-1)
+		A, B, C, J = list(map(expand, (A,B,C,J)))
+		
+		return A, B, C, J,  u, s, v, o, b, q, n, w
+
 def optimize() :
-				"""
+		"""
 				H en haut : (258, 442), en bas : (297, 766)
 				O en haut : (599, 440), en bas : (107, 1043)
+		"""
+
+		degree = 2 * torch.pi / 360
+		a = Tsr(21 * degree)
+		
+		aa = torch.arange(40., 0, -0.1, device=dev)
+		"""
+		aa = torch.arange(40., 0, -1., device=dev)
+		aa = torch.arange(40., 0, -9., device=dev)
+		aa = Tsr([40., 31., 22., 12., 1.])
+		aa = Tsr([40., 31., 22., 1.])		
+		aa = Tsr([40., 31., 22.])
+		aa = Tsr([39.])
+		"""
+		W = aa.shape[0]
+		ard = aa / 360 * 2 * pi
+		A, B, C, J,  u, s, v, o, b, q, n, w = build(W)
+		variables = [u, s, v, o, b, q, n, w]
+		EKOX(variables)
+		optimizer = optim.SGD(variables, lr=0.01, momentum=0.9)
+		optimizer = optim.Adam(variables, lr=0.00001)
+		lps = Cp, F, N, H, O, K = f1(ard, A, B, C, J, u, s, v, o, b, q, n, w)
+		lps = torch.stack(lps).permute(1,0,2)
+		mask = ~torch.any(lps.isnan(),dim=(1,2))
+		lps = lps[mask]
+		EKOX(lps.shape)
+		
+		
+		for _n in range(100) :
+				los, lhs = [], []
+				optimizer.zero_grad()
+
+				# version vectorisée
+				lps = Cp, F, N, H, O, K = f1(ard, A, B, C, J,
+											 u, s, v, o, b, q, n, w)
+				lps = torch.stack(lps).permute(1,0,2)
+				mask = ~torch.any(lps.isnan(),dim=(1,2))
+				lps = lps[mask]
+				EKOX(lps.shape)
+				lhs = lps[:, 3, :] # H
+				los = lps[:, 4, :] # O
+				EKOX(lhs.shape)
+				hmx = torch.amax(lhs, dim=0)
+				hmn = torch.amin(lhs, dim=0)
+				EKOX(hmx.shape)
+				omx = torch.amax(los, dim=0)
+				omn = torch.amin(los, dim=0)
+				
+				loss = (hmx[0] - hmn[0]) # on veut excursion horizontale minimum
+				EKOX(loss.item())
+				loss += torch.abs(hmx[1] - hmn[1] - 300) / 300 # et de hauteur donnée
+				
+				EKOX(loss.item())
+				loss += (los[0][1] - lhs[0][1]).norm() # on veut la hauteur de O et H au départ egale
+				EKOX(loss.item())
+				loss += (los[-1][0] - lhs[-1][0]).norm() # on veut l'abscisse de O et H a la fin egale
+				EKON(_n, loss.item())
+				loss.backward()
+				optimizer.step()				
+				
+
+
+
 				"""
 				
-				variables = [u, s, v, o, b, q, n, w]
-				EKOX(variables)
-				optimizer = optim.SGD(variables, lr=0.01, momentum=0.9)
-				optimizer = optim.Adam(variables, lr=0.1)
-
-
-				aa = torch.arange(40., 0, -0.1, device=dev)
-				ard = aa / 360 * 2 * pi				
-				lps = A, B, C, J, Cp, F, N, H, O, K = f1(ard)
-				EKOX(A.shape)
-				for _n in range(100) :
-								los, lhs = [], []
-								optimizer.zero_grad()
-								for ia, a in enumerate(torch.arange(40., 0, -0.1, device=dev)) :
-												rd = a / 360 * 2 * pi
-												lps = A, B, C, J, Cp, F, N, H, O, K = f1(rd)
-												lps = torch.cat(lps)
-												if lps.isnan().any() :
-																EKOX(ia)
-																break
-												
-												los.append(O)
-												lhs.append(H)
-
-								lhs = torch.stack(lhs)
-								hmx = torch.amax(lhs, dim=0)
-								hmn = torch.amin(lhs, dim=0)
-
-								los = torch.stack(los)
-								omx = torch.amax(los, dim=0)
-								omn = torch.amin(los, dim=0)
-								
-								loss = (hmx[0] - hmn[0]) # on veut excursion horizontale minimum
-								loss += torch.abs(hmx[1] - hmn[1] - 300) # et de hauteur donnée
-
-								loss += (los[0][1] - lhs[0][1]).norm() # on veut la hauteur de O et H au départ egale
-								loss += (los[-1][0] - lhs[-1][0]).norm() # on veut l'abscisse de O et H a la fin egale
-								EKON(_n, loss.item())
-								loss.backward()
-								optimizer.step()				
-												
+				for ia, a in enumerate(torch.arange(40., 0, -0.1, device=dev)) :
+						rd = a / 360 * 2 * pi
+						rd = rd[None]
+						lps = Cp, F, N, H, O, K = f1(rd, A, B, C, J,
+													 u, s, v, o, b, q, n, w)
+						lps = torch.stack(lps).permute(1,0,2)
+						mask = ~torch.any(lps.isnan(),dim=(1,2))
+						lps = lps[mask]
+						
+						los.append(O)
+						lhs.append(H)
+						
+						lhs = torch.stack(lhs)
+						hmx = torch.amax(lhs, dim=0)
+						hmn = torch.amin(lhs, dim=0)
+						
+						los = torch.stack(los)
+						omx = torch.amax(los, dim=0)
+						omn = torch.amin(los, dim=0)
+						
+						loss = (hmx[0] - hmn[0]) # on veut excursion horizontale minimum
+						loss += torch.abs(hmx[1] - hmn[1] - 300) # et de hauteur donnée
+						
+						loss += (los[0][1] - lhs[0][1]).norm() # on veut la hauteur de O et H au départ egale
+						loss += (los[-1][0] - lhs[-1][0]).norm() # on veut l'abscisse de O et H a la fin egale
+						EKON(_n, loss.item())
+						loss.backward()
+						optimizer.step()				
+				"""		
 optimize()
-EKON(u,   s,   v,   o,   b,   q,   n,   w)
+#EKON(u,   s,   v,   o,   b,   q,   n,   w)
 

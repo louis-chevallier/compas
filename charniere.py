@@ -1,6 +1,6 @@
 from tkinter import *
 from tkinter.ttk import *
-
+from funcy import compose
 import numpy as np
 import math as m
 from utillc import *
@@ -58,16 +58,24 @@ class Shape:
 	def dessiner(self, vvv):
 			vvv = float(vvv)
 			r=5
-			shift = lambda x : ((x + (30-14, 0)) * 70 + ( 20, 20)) * ( 1, -1) + (20, 900)
-			lll = map(to_np, compas1.f1(T(vvv)))
-			lll = list(map(shift, lll))
-			#EKOX(list(lll))
-			A, B, C, J, Cp, F, N, H, O, K = tuple(lll)
-
-			EKOX(H)
-			EKOX(O)
-
-			
+			shift = lambda x : ((x + (30-14, 0)) * 70 + ( 20, 20)) * ( 1, -1) + (180, 900)
+			def kkk(NN) :
+					vvvs = [vvv] * NN
+					EKOX(vvvs)
+					A, B, C, J,  u, s, v, o, b, q, n, w = compas1.build(NN)
+					lll = map(to_np, compas1.f1(T(vvvs), A, B, C, J, u, s, v, o, b, q, n, w))
+					lll = list(map(shift, lll))
+					Cp, F, N, H, O, K = tuple(lll)
+					EKON(Cp, F, N, H, O, K)
+					EKON(A, B, C, J)
+					
+					#EKOX(list(lll))
+					squeeze = lambda x : x[0]
+					Cp, F, N, H, O, K = map(squeeze, tuple(lll))
+					A, B, C, J = map(compose(shift,  to_np, squeeze), (A, B, C, J))
+					return A, B, C, J, Cp, F, N, H, O, K
+			A, B, C, J, Cp, F, N, H, O, K = kkk(1)
+						
 			dcc = lambda p, pc : (self.canvas.coords(p[0],
 													 pc[0]-r, pc[1]-r, pc[0]+r, pc[1]+r),
 								  self.canvas.coords(p[1],
@@ -75,7 +83,7 @@ class Shape:
 			dcl = lambda p, pa, pb : self.canvas.coords(p, pa[0], pa[1], pb[0], pb[1])
 			
 
-			
+
 			dcl(self.sacp, A, Cp)
 			dcl(self.sbf, B, F)
 			dcl(self.scpf, Cp, F)
@@ -107,7 +115,7 @@ class Shape:
 						   #label = 'Amount',
 						   length = 500,
 						   command = self.ff,
-						   from_= -20, to=180) #-np.pi, to = np.pi)
+						   from_= -40, to=0) #-np.pi, to = np.pi)
 			self.label = Label(text="text")
 			c, r = (30, 40), 5
 
@@ -159,6 +167,14 @@ class Shape:
 			self.label.pack()
 			self.canvas.pack(fill=BOTH, expand=1)
 
+			EKOX(23)
+			degree = 23.
+			rd = degree / 360 * 2 * np.pi
+			A, B, C, J,  u, s, v, o, b, q, n, w = compas1.build()			
+			lll = map(to_np, compas1.f1(T([rd]), A, B, C, J, u, s, v, o, b, q, n, w))
+
+
+			
 
 if __name__ == "__main__":
 	
@@ -167,6 +183,6 @@ if __name__ == "__main__":
 
 	master.title("Shapes")
 	
-	master.geometry("830x820+300+100")
+	master.geometry("1000x1000+300+100")
 
 	mainloop()
