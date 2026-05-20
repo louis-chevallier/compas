@@ -101,6 +101,9 @@ def f1(a, A, B, C, J, u, s, v, o, b, q, n, w) :
 		"""
 				a en rd
 		"""
+		W = a.shape[0]
+		expand = lambda x : x.expand(W,-1)
+		A, B, C, J = list(map(expand, (A,B,C,J)))
 		Cp= rot(C, A, a)
 		K = joint(Cp, J, u, s)
 		N = proj2(J, K, v)
@@ -121,9 +124,6 @@ def build(W=1) :
 		n, w = V(4.8), V(6.)
 		ddd, u,   s,   v,   o,   b,   q,   n,   w = map(V, [
 				0.,  1.9, 2.0, 6.5, 3.8, 4.5, 2.4, 4.8, 6.0])
-		expand = lambda x : x.expand(W,-1)
-		A, B, C, J = list(map(expand, (A,B,C,J)))
-		
 		return A, B, C, J,  u, s, v, o, b, q, n, w
 
 
@@ -154,7 +154,7 @@ def step(optimizer, ctxt, _n=0) :
 				optimizer.step()				
 				return loss
 
-def optimize() :
+def optimize(steps=300) :
 		"""
 				H en haut : (258, 442), en bas : (297, 766)
 				O en haut : (599, 440), en bas : (107, 1043)
@@ -180,9 +180,9 @@ def optimize() :
 		optimizer = optim.SGD(variables, lr=0.01, momentum=0.9)
 		optimizer = optim.Adam(variables, lr=0.01)
 		params = ard, A, B, C, J, u, s, v, o, b, q, n, w
-		return optimize1(optimizer, params)
+		return optimize1(optimizer, params, steps)
 
-def optimize1(optimizer, params) :
+def optimize1(optimizer, params, steps=300) :
 		ard, A, B, C, J, u, s, v, o, b, q, n, w = params
 		lps = Cp, F, N, H, O, K = f1(ard, A, B, C, J, u, s, v, o, b, q, n, w)
 		lps = torch.stack(lps).permute(1,0,2)
@@ -192,12 +192,12 @@ def optimize1(optimizer, params) :
 		EKOX(lps.shape)
 		ctxt = ard, A, B, C, J,  u, s, v, o, b, q, n, w
 		losses = []
-		for _n in range(300) :
+		for _n in range(steps) :
 				ll = step(optimizer, ctxt, _n=_n)
 				losses.append(ll.item())
 				
 		#plt.plot(losses); plt.show()
 		return u, s, v, o, b, q, n, w, J
-optimize()
+#optimize(steps=2); sys.exit(0)
 #EKON(u,   s,   v,   o,   b,   q,   n,   w)
 

@@ -76,6 +76,9 @@ class Shape:
 		self.lvs = ard, A, B, C, J,  u, s, v, o, b, q, n, w
 		
 		variables = [u, s, v, o, b, q, n, w, J]
+		EKOX(A.shape)
+		EKOX(J.shape)
+		EKOX(u.shape)
 		self.var = tuple(variables) 
 		#self.var = compas1.optimize()
 		#EKOX(variables)
@@ -85,11 +88,13 @@ class Shape:
 		self.vvv = 32
 		self.tick()
 		#self.master.after(100, self.tick)
+		self.dessiner(-20 / 360*2*np.pi)		
 		
 	def tick(self) :
 		self.master.after(100, self.tick)
 		if (self.var_c.get()) :
 				loss = compas1.step(self.optimizer, self.lvs, self.count)
+				u, s, v, o, b, q, n, w, J = self.var
 				self.count += 1
 				self.count_label.config(text='count=%d, loss=%f' % (self.count, loss.item()) )
 				self.dessiner(self.vvv)
@@ -98,32 +103,22 @@ class Shape:
 			self.vvv = vvv = float(vvv)
 			
 			r=5
-			shift = lambda x : ((x + (30-14, 0)) * 70 + ( 20, 20)) * ( 1, -1) + (180, 900)
+			shift = lambda x : ((x + (30-14, 0)) * 50 + ( 20, 20)) * ( 1, -1) + (180, 700)
 			def kkk(NN) :
 					vvvs = [vvv] * NN
 					#EKOX(vvvs)
 					A, B, C, J,  u, s, v, o, b, q, n, w = compas1.build(NN)
 					u, s, v, o, b, q, n, w, J = self.var
-					#EKOX(A.shape)
-					#EKOX(J.shape)
-					J0 = J[0:1, :]
-					#EKOX(J0.shape)
+					J0 = J
 					lps = compas1.f1(T(vvvs), A, B, C, J0, u, s, v, o, b, q, n, w)
 					lps1 = torch.stack(lps).permute(1,0,2)
-					#EKOX(lps.isnan().any())
 					assert(not lps1.isnan().any())
-					
 					lll = map(to_np, lps)
 					lll = list(map(shift, lll))
 					Cp, F, N, H, O, K = tuple(lll)
-					#EKON(Cp, F, N, H, O, K)
-					#EKON(A, B, C, J)
-					
-					#EKOX(list(lll))
 					squeeze = lambda x : x[0]
 					Cp, F, N, H, O, K = map(squeeze, tuple(lll))
-					A, B, C, J = map(compose(shift,  to_np, squeeze), (A, B, C, J))
-
+					A, B, C, J = map(compose(shift,  to_np), (A, B, C, J0))
 					return A, B, C, J, Cp, F, N, H, O, K
 			
 			A, B, C, J, Cp, F, N, H, O, K = kkk(1)
@@ -132,7 +127,6 @@ class Shape:
 								  self.canvas.coords(p[1],
 													 pc[0], pc[1]-r*3))
 			dcl = lambda p, pa, pb : self.canvas.coords(p, pa[0], pa[1], pb[0], pb[1])
-			
 			dcl(self.sacp, A, Cp)
 			dcl(self.sbf, B, F)
 			dcl(self.scpf, Cp, F)
@@ -215,7 +209,7 @@ class Shape:
 			self.scpk = cl()			
 			
 		
-			#self.dessiner(0)
+
 			#amount = slider.get()		
 			slider.pack()
 			self.label.pack()
@@ -229,16 +223,9 @@ class Shape:
 			A, B, C, J,  u, s, v, o, b, q, n, w = compas1.build()			
 			lll = map(to_np, compas1.f1(T([rd]), A, B, C, J, u, s, v, o, b, q, n, w))
 
-
-			
-
 if __name__ == "__main__":
-	
 	master = Tk()
 	shape = Shape(master)
-
 	master.title("Shapes")
-	
-	master.geometry("1000x1000+300+100")
-
+	master.geometry("1200x1000+300+10")
 	mainloop()
