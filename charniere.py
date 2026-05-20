@@ -75,25 +75,24 @@ class Shape:
 		A, B, C, J,  u, s, v, o, b, q, n, w = compas1.build(W)
 		self.lvs = ard, A, B, C, J,  u, s, v, o, b, q, n, w
 		
-		variables = [u, s, v, o, b, q, n, w]
+		variables = [u, s, v, o, b, q, n, w, J]
 		self.var = tuple(variables) 
-
-		self.var = compas1.optimize()
-
-		
-		EKOX(variables)
+		#self.var = compas1.optimize()
+		#EKOX(variables)
 		optimizer = optim.SGD(variables, lr=0.01, momentum=0.9)
 		self.optimizer = optim.Adam(variables, lr=0.01)
 		self.count = 0
 		self.vvv = 32
-		#self.tick()
+		self.tick()
 		#self.master.after(100, self.tick)
 		
 	def tick(self) :
 		self.master.after(100, self.tick)
-		compas1.step(self.optimizer, self.lvs, self.count)
-		self.count += 1
-		self.dessiner(self.vvv)
+		if (self.var_c.get()) :
+				loss = compas1.step(self.optimizer, self.lvs, self.count)
+				self.count += 1
+				self.count_label.config(text='count=%d, loss=%f' % (self.count, loss.item()) )
+				self.dessiner(self.vvv)
 
 	def dessiner(self, vvv):
 			self.vvv = vvv = float(vvv)
@@ -104,9 +103,12 @@ class Shape:
 					vvvs = [vvv] * NN
 					#EKOX(vvvs)
 					A, B, C, J,  u, s, v, o, b, q, n, w = compas1.build(NN)
-					u, s, v, o, b, q, n, w = self.var
-
-					lps = compas1.f1(T(vvvs), A, B, C, J, u, s, v, o, b, q, n, w)
+					u, s, v, o, b, q, n, w, J = self.var
+					#EKOX(A.shape)
+					#EKOX(J.shape)
+					J0 = J[0:1, :]
+					#EKOX(J0.shape)
+					lps = compas1.f1(T(vvvs), A, B, C, J0, u, s, v, o, b, q, n, w)
 					lps1 = torch.stack(lps).permute(1,0,2)
 					#EKOX(lps.isnan().any())
 					assert(not lps1.isnan().any())
@@ -164,6 +166,11 @@ class Shape:
 						   command = self.ff,
 						   from_= -40, to=0) #-np.pi, to = np.pi)
 			self.label = Label(text="text")
+			self.count_label = Label(text="text")
+			self.var_c = BooleanVar(master=self.master)
+
+			self.optimize_button = Checkbutton(text="optimize",
+											   variable=self.var_c)
 			c, r = (30, 40), 5
 
 			css_arc = lambda : self.canvas.create_arc(c[0]-r, c[0]-r,
@@ -212,6 +219,8 @@ class Shape:
 			#amount = slider.get()		
 			slider.pack()
 			self.label.pack()
+			self.count_label.pack()
+			self.optimize_button.pack()
 			self.canvas.pack(fill=BOTH, expand=1)
 
 			EKOX(23)

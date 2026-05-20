@@ -97,9 +97,6 @@ def joint(a, b, u, s, i=0) :
 		X = torch.vstack(X).T
 		return X
 
-
-
-
 def f1(a, A, B, C, J, u, s, v, o, b, q, n, w) :
 		"""
 				a en rd
@@ -152,7 +149,7 @@ def step(optimizer, ctxt, _n=0) :
 				
 				loss += (los[0][1] - lhs[0][1]).norm() # on veut la hauteur de O et H au départ egale
 				loss += (los[-1][0] - lhs[-1][0]).norm() # on veut l'abscisse de O et H a la fin egale
-				EKON(_n, lps.shape, loss.item())
+				#EKON(_n, lps.shape, loss.item())
 				loss.backward()
 				optimizer.step()				
 				return loss
@@ -178,10 +175,15 @@ def optimize() :
 		W = aa.shape[0]
 		ard = aa / 360 * 2 * pi
 		A, B, C, J,  u, s, v, o, b, q, n, w = build(W)
-		variables = [u, s, v, o, b, q, n, w]
-		EKOX(variables)
+		variables = [u, s, v, o, b, q, n, w, J]
+		#EKOX(variables)
 		optimizer = optim.SGD(variables, lr=0.01, momentum=0.9)
 		optimizer = optim.Adam(variables, lr=0.01)
+		params = ard, A, B, C, J, u, s, v, o, b, q, n, w
+		return optimize1(optimizer, params)
+
+def optimize1(optimizer, params) :
+		ard, A, B, C, J, u, s, v, o, b, q, n, w = params
 		lps = Cp, F, N, H, O, K = f1(ard, A, B, C, J, u, s, v, o, b, q, n, w)
 		lps = torch.stack(lps).permute(1,0,2)
 		EKOX(lps.shape)
@@ -194,8 +196,8 @@ def optimize() :
 				ll = step(optimizer, ctxt, _n=_n)
 				losses.append(ll.item())
 				
-		plt.plot(losses); plt.show()
-		return u, s, v, o, b, q, n, w
-#optimize()
+		#plt.plot(losses); plt.show()
+		return u, s, v, o, b, q, n, w, J
+optimize()
 #EKON(u,   s,   v,   o,   b,   q,   n,   w)
 
