@@ -52,12 +52,47 @@ def proj(A, B, l) :
 		X = (B-A)*l/d+A
 		return X
 
+def distPP(A, B) :
+		d = (A-B).norm(dim=1)
+		return d
+
+def distPSegment(p, S) :
+# Source - https://stackoverflow.com/a/1501725
+# Posted by Grumdrig, modified by community. See post 'Timeline' for change history
+# Retrieved 2026-05-20, License - CC BY-SA 4.0
+		v, w = S
+		l = distPP(v, w)
+		l2 = l*l
+		""" Consider the line extending the segment, parameterized as v + t (w - v).
+  // We find projection of point p onto the line. 
+  // It falls where t = [(p-v) . (w-v)] / |w-v|^2
+  // We clamp t from [0,1] to handle points outside the segment vw.
+		"""
+		pv = (p - v)[:, None, :]
+		wv = (w - v)[:, :, None]
+		t = torch.clamp(torch.bmm(pv, wv)[:, 0] / l2[:, None], 0, 1)
+		projection = v + t * (w - v) #;  // Projection falls on the segment
+		return distPP(p, projection)
+
+"""
+C1, C2, C3, C4 = (P(-1., 1.) , P(0., 0.) , P(2., 0.) , P(2., -1.))
+EKOX(T([C1,C2, C3, C4]).shape)
+EKOX(C1.shape)
+EKOX(C1[None, :].shape)
+EKOX(distPP(C1[None, :], C2[None, :]).item())
+A, B = P(0., 1.), P(1., 0.)
+AB = A.expand(4, -1), B.expand(4, -1)
+
+EKOX(distPSegment(T([C1, C2, C3, C4]), AB).numpy())
+sys.exit(0)
+"""
+
 def proj2(A, B, l) :
 		"""
 		if dist(A,B) = d
 		return X such that AX = AB / d * l
 		"""
-		d = (A-B).norm(dim=1)
+		d = distPP(A, B)
 		f = (d+l)/d
 		X1 = (B-A)*f[:,None]
 		X = X1+A
@@ -71,6 +106,10 @@ sol = solve([eq1, eq2], [x, y])
 
 lf1 = lambdify([px, py, qx, qy, u, s], sol[0], "numpy")
 lf2 = lambdify([px, py, qx, qy, u, s], sol[1], "numpy")
+
+
+
+
 
 EKOX(sol[0])
 
@@ -116,7 +155,7 @@ pi = Tsr(np.pi)
 
 
 def build(W=1) :
-		A, B, C, J = P(-16., 10.),  P(-16., 6.),  P(-11., 9.), P(-14., 10.)
+		A, B, C, J = P(-16., 10.),  P(-16., 6.),  P(-11., 9.), P(-14., 11.)
 		u, s = map(V, [1.9, 2.])
 		v = V(6.5)
 		o, b = V(3.8), V(4.5)
@@ -124,7 +163,7 @@ def build(W=1) :
 		n, w = V(4.8), V(6.)
 		ddd, u,   s,   v,   o,   b,   q,   n,   w = map(V, [
 				0.,  1.9, 2.0, 6.5, 3.8, 4.5, 2.4, 4.8, 6.0])
-		return A, B, C, J,  u, s, v, o, b, q, n, w
+		return A, B, C, V(J),  u, s, v, o, b, q, n, w
 
 
 def step(optimizer, ctxt, _n=0) :
@@ -146,9 +185,17 @@ def step(optimizer, ctxt, _n=0) :
 				
 				loss = (hmx[0] - hmn[0]) # on veut excursion horizontale minimum
 				loss += torch.abs(hmx[1] - hmn[1] - 300) / 300 # et de hauteur donnée
-				
+
 				loss += (los[0][1] - lhs[0][1]).norm() # on veut la hauteur de O et H au départ egale
 				loss += (los[-1][0] - lhs[-1][0]).norm() # on veut l'abscisse de O et H a la fin egale
+
+				W = H.shape[0]
+				Je, Ae = J.expand(W, -1), A.expand(W, -1)
+				
+				loss += (1. / torch.clamp(distPSegment(Je, (Ae, Cp)), 0.01, 200)).amax()
+				
+				loss += (1. / torch.clamp(distPSegment(K, (F, Cp)), 0.01, 200)).amax()
+
 				#EKON(_n, lps.shape, loss.item())
 				loss.backward()
 				optimizer.step()				
